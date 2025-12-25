@@ -1,0 +1,279 @@
+<section
+  class="ssc-section"
+  style="
+    --ssc-bg: {{ section.settings.bg_color }};
+    --ssc-title: {{ section.settings.title_color }};
+    --ssc-text: {{ section.settings.text_color }};
+    --ssc-btn-bg: {{ section.settings.btn_bg }};
+    --ssc-btn-text: {{ section.settings.btn_text_color }};
+    --ssc-radius: {{ section.settings.image_radius }}px;
+    --ssc-content-pad: {{ section.settings.content_padding }}px;
+  "
+>
+  <!-- DESKTOP STICKY IMAGE -->
+  <div class="ssc-sticky">
+    <img
+      id="sscImage"
+      src="{{ section.blocks.first.settings.image | image_url: width: 1400 }}"
+      alt=""
+      loading="eager"
+      fetchpriority="high"
+    >
+  </div>
+
+  <!-- DESKTOP CONTENT -->
+  <div class="ssc-content">
+    {% for block in section.blocks %}
+      <div
+        class="ssc-block"
+        data-image="{{ block.settings.image | image_url: width: 1400 }}"
+        {{ block.shopify_attributes }}
+      >
+        <div class="ssc-text">
+          <h2>{{ block.settings.title }}</h2>
+          <p>{{ block.settings.text }}</p>
+
+          {% if block.settings.button_text != blank %}
+            <a href="{{ block.settings.button_link }}" class="ssc-btn">
+              {{ block.settings.button_text }}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- MOBILE CAROUSEL -->
+  <div class="ssc-mobile">
+    <div class="ssc-mobile-track">
+      {% for block in section.blocks %}
+        <div class="ssc-mobile-slide">
+          <img
+            src="{{ block.settings.image | image_url: width: 900 }}"
+            alt=""
+            loading="lazy"
+          >
+          <h3>{{ block.settings.title }}</h3>
+          <p>{{ block.settings.text }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ================= BASE ================= */
+.ssc-section {
+  position: relative;
+  background: var(--ssc-bg);
+}
+
+/* ================= STICKY IMAGE ================= */
+.ssc-sticky {
+  position: sticky;
+  top: 70px;
+  height: 100vh;
+  width: 45%;
+  float: left;
+}
+
+.ssc-sticky img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: var(--ssc-radius);
+  transition: transform 0.5s ease;
+}
+
+/* ================= CONTENT ================= */
+.ssc-content {
+  width: 55%;
+  margin-left: 45%;
+  padding-left: var(--ssc-content-pad);
+}
+
+.ssc-block {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+}
+
+.ssc-text {
+  max-width: 540px;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.ssc-text.is-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.ssc-text h2 {
+  color: var(--ssc-title);
+  font-size: clamp(20px,2vw, 24px);
+  margin-bottom: 18px;
+}
+
+.ssc-text p {
+  color: var(--ssc-text);
+  font-size: clamp(16px, 1.2vw, 18px);
+  line-height: 1.8;
+}
+
+.ssc-btn {
+  display: inline-block;
+  margin-top: 26px;
+  padding: 14px 30px;
+  background: var(--ssc-btn-bg);
+  color: var(--ssc-btn-text);
+  text-decoration: none;
+  border-radius: 6px;
+}
+
+/* ================= MOBILE ================= */
+.ssc-mobile {
+  display: none;
+}
+
+@media (max-width: 991px) {
+  .ssc-sticky,
+  .ssc-content {
+    display: none;
+  }
+
+  .ssc-mobile {
+    display: block;
+    padding: 20px 0;
+  }
+
+  .ssc-mobile-track {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 0 20px;
+  }
+
+  .ssc-mobile-slide {
+    min-width: 85%;
+    scroll-snap-align: center;
+  }
+
+  .ssc-mobile-slide img {
+    width: 100%;
+    border-radius: var(--ssc-radius);
+    margin-bottom: 16px;
+  }
+
+  .ssc-mobile-slide h3 {
+    font-size: 22px;
+    margin-bottom: 10px;
+  }
+
+  .ssc-mobile-slide p {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+}
+
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const image = document.getElementById("sscImage");
+  const blocks = document.querySelectorAll(".ssc-block");
+
+  if (!image || !blocks.length) return;
+
+  let currentSrc = image.src;
+  const preload = {};
+
+  blocks.forEach(b => {
+    const src = b.dataset.image;
+    if (src && !preload[src]) {
+      const img = new Image();
+      img.src = src;
+      preload[src] = true;
+    }
+  });
+
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        const text = entry.target.querySelector(".ssc-text");
+
+        if (entry.isIntersecting) {
+          text.classList.add("is-active");
+
+          const newSrc = entry.target.dataset.image;
+          if (newSrc && newSrc !== currentSrc) {
+            currentSrc = newSrc;
+            image.style.transform = "scale(1.03)";
+            image.src = newSrc;
+
+            requestAnimationFrame(() => {
+              image.style.transform = "scale(1)";
+            });
+          }
+        } else {
+          text.classList.remove("is-active");
+        }
+      });
+    },
+    { threshold: 0.55 }
+  );
+
+  blocks.forEach(b => observer.observe(b));
+});
+</script>
+{% schema %}
+{
+  "name": "Sticky Image Scroll",
+  "settings": [
+    { "type": "color", "id": "bg_color", "label": "Background color", "default": "#ffffff" },
+    { "type": "color", "id": "title_color", "label": "Title color", "default": "#2f2b55" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#555555" },
+
+    { "type": "color", "id": "btn_bg", "label": "Button background", "default": "#2f2b55" },
+    { "type": "color", "id": "btn_text_color", "label": "Button text color", "default": "#ffffff" },
+
+    {
+      "type": "range",
+      "id": "image_radius",
+      "label": "Image border radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "content_padding",
+      "label": "Content left padding",
+      "min": 0,
+      "max": 120,
+      "step": 10,
+      "default": 60
+    }
+  ],
+  "blocks": [
+    {
+      "type": "content",
+      "name": "Slide",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Image" },
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "richtext", "id": "text", "label": "Text" },
+        { "type": "text", "id": "button_text", "label": "Button text" },
+        { "type": "url", "id": "button_link", "label": "Button link" }
+      ]
+    }
+  ],
+  "presets": [
+    { "name": "Sticky Image Scroll (Design Polished)" }
+  ]
+}
+{% endschema %}
