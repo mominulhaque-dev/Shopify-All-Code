@@ -1,0 +1,48 @@
+{% comment %} 1. Load all variant descriptions into a JavaScript object {% endcomment %}
+<script id="variant-descriptions-json" type="application/json">
+  {
+    {% for variant in product.variants %}
+      "{{ variant.id }}": {{ variant.metafields.custom.variant_desc | metafield_tag | json }}
+      {% unless forloop.last %},{% endunless %}
+    {% endfor %}
+  }
+</script>
+
+{% comment %} 2. The container where text will change {% endcomment %}
+<div id="variant-description-container" style="min-height: 20px;">
+  {{ product.selected_or_first_available_variant.metafields.custom.variant_desc | metafield_tag }}
+</div>
+
+{% comment %} 3. The script to watch for changes without refreshing {% endcomment %}
+<script>
+  (function() {
+    const descriptions = JSON.parse(document.getElementById('variant-descriptions-json').innerHTML);
+    const container = document.getElementById('variant-description-container');
+
+    function updateDescription() {
+      // Modern themes update the URL ?variant=123456789
+      const urlParams = new URLSearchParams(window.location.search);
+      const variantId = urlParams.get('variant');
+      
+      if (variantId && descriptions[variantId]) {
+        container.innerHTML = descriptions[variantId];
+      } else if (!variantId) {
+        // Fallback to first available if no variant is in URL yet
+        const firstId = "{{ product.selected_or_first_available_variant.id }}";
+        container.innerHTML = descriptions[firstId] || "";
+      }
+    }
+
+    // Listens for theme URL changes (Dawn/Sense/Craft)
+    let lastUrl = location.href;
+    new MutationObserver(() => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        updateDescription();
+      }
+    }).observe(document, { subtree: true, childList: true });
+
+    // Initial check on load
+    updateDescription();
+  })();
+</script>
